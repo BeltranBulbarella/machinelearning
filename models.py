@@ -1,5 +1,6 @@
 import nn
 
+
 class PerceptronModel(object):
     def __init__(self, dimensions):
         """
@@ -29,8 +30,6 @@ class PerceptronModel(object):
         """
         return nn.DotProduct(self.w, x)
 
-
-
     def get_prediction(self, x):
         """
         Calculates the predicted class for a single data point `x`.
@@ -49,6 +48,7 @@ class PerceptronModel(object):
         Use the update method of the nn.Parameter class to update the weights.
         When an entire pass over the data set is completed without making any mistakes, 100% training accuracy has been achieved, and training can terminate.
         """
+        "*** YOUR CODE HERE ***"
         while True:
             mistake = False
             for x, y in dataset.iterate_once(1):
@@ -58,15 +58,20 @@ class PerceptronModel(object):
             if not mistake:
                 break
 
+
 class RegressionModel(object):
     """
     A neural network model for approximating a function that maps from real
     numbers to real numbers. The network should be sufficiently large to be able
     to approximate sin(x) on the interval [-2pi, 2pi] to reasonable precision.
     """
+
     def __init__(self):
         # Initialize your model parameters here
-        "*** YOUR CODE HERE ***"
+        self.W1 = nn.Parameter(1, 40)  # First layer of weights
+        self.b1 = nn.Parameter(1, 40)  # Bias of the first layer
+        self.W2 = nn.Parameter(40, 1)  # Second layer of weights
+        self.b2 = nn.Parameter(1, 1)  # Bias of the second layer
 
     def run(self, x):
         """
@@ -77,7 +82,12 @@ class RegressionModel(object):
         Returns:
             A node with shape (batch_size x 1) containing predicted y-values
         """
-        "*** YOUR CODE HERE ***"
+        x = nn.Linear(x, self.W1)
+        x = nn.AddBias(x, self.b1)
+        x = nn.ReLU(x)
+        x = nn.Linear(x, self.W2)
+        x = nn.AddBias(x, self.b2)
+        return x
 
     def get_loss(self, x, y):
         """
@@ -89,13 +99,53 @@ class RegressionModel(object):
                 to be used for training
         Returns: a loss node
         """
-        "*** YOUR CODE HERE ***"
+        # Compute the squared loss
+        pred = self.run(x)
+        return nn.SquareLoss(pred, y)
 
     def train(self, dataset):
         """
-        Trains the model.
+        Tests:
+                learning_rate: 0.02
+                epochs: 100
+                Your final loss (0.089931) must be no more than 0.0200 to receive full points for this question
+
+                learning_rate: 0.01
+                epochs: 1000
+                Your final loss (0.025888) must be no more than 0.0200 to receive full points for this question
+
+                learning_rate: 0.01
+                epochs: 2000
+                Your final loss (0.075072) must be no more than 0.0200 to receive full points for this question
+
+                learning_rate: 0.005
+                epochs: 1000
+                Your final loss (0.072677) must be no more than 0.0200 to receive full points for this question
+
+                Got it changing the model parameters
         """
-        "*** YOUR CODE HERE ***"
+
+        learning_rate = 0.01 # The learning rate
+        epochs = 1000 # The number of epochs, an epoch is a complete pass through the dataset
+        for epoch in range(epochs):
+            total_loss = 0
+            num_examples = 0
+            for x, y in dataset.iterate_once(1):
+                loss = self.get_loss(x, y) # Compute the loss for this example
+                grad_wrt_W1, grad_wrt_b1, grad_wrt_W2, grad_wrt_b2 = nn.gradients(loss,
+                                                                                  [self.W1, self.b1, self.W2, self.b2])
+                self.W1.update(grad_wrt_W1, -learning_rate) # Update the weights, why? to minimize the loss
+                self.b1.update(grad_wrt_b1, -learning_rate)
+                self.W2.update(grad_wrt_W2, -learning_rate)
+                self.b2.update(grad_wrt_b2, -learning_rate)
+
+                total_loss += nn.as_scalar(loss)
+                num_examples += 1
+            average_loss = total_loss / num_examples
+            print(f'Epoch {epoch + 1}, Loss: {average_loss}')
+            if average_loss <= 0.02:  # Stop training if the loss is small enough
+                break
+
 
 class DigitClassificationModel(object):
     """
@@ -111,9 +161,13 @@ class DigitClassificationModel(object):
     methods here. We recommend that you implement the RegressionModel before
     working on this part of the project.)
     """
+
     def __init__(self):
         # Initialize your model parameters here
-        "*** YOUR CODE HERE ***"
+        self.W1 = nn.Parameter(784, 300)
+        self.b1 = nn.Parameter(1, 300)
+        self.W2 = nn.Parameter(300, 10)
+        self.b2 = nn.Parameter(1, 10)
 
     def run(self, x):
         """
@@ -129,7 +183,12 @@ class DigitClassificationModel(object):
             A node with shape (batch_size x 10) containing predicted scores
                 (also called logits)
         """
-        "*** YOUR CODE HERE ***"
+        x = nn.Linear(x, self.W1)
+        x = nn.AddBias(x, self.b1)
+        x = nn.ReLU(x)
+        x = nn.Linear(x, self.W2)
+        x = nn.AddBias(x, self.b2)
+        return x
 
     def get_loss(self, x, y):
         """
@@ -144,13 +203,32 @@ class DigitClassificationModel(object):
             y: a node with shape (batch_size x 10)
         Returns: a loss node
         """
-        "*** YOUR CODE HERE ***"
+        pred = self.run(x)
+        return nn.SoftmaxLoss(pred, y)
 
     def train(self, dataset):
         """
         Trains the model.
         """
-        "*** YOUR CODE HERE ***"
+        learning_rate = 0.01
+        epochs = 5
+        for epoch in range(epochs):
+            total_loss = 0
+            num_examples = 0
+            for x, y in dataset.iterate_once(1):
+                loss = self.get_loss(x, y)
+                grad_wrt_W1, grad_wrt_b1, grad_wrt_W2, grad_wrt_b2 = nn.gradients(loss,
+                                                                                  [self.W1, self.b1, self.W2, self.b2])
+                self.W1.update(grad_wrt_W1, -learning_rate)
+                self.b1.update(grad_wrt_b1, -learning_rate)
+                self.W2.update(grad_wrt_W2, -learning_rate)
+                self.b2.update(grad_wrt_b2, -learning_rate)
+
+                total_loss += nn.as_scalar(loss)
+                num_examples += 1
+            average_loss = total_loss / num_examples
+            print(f'Epoch {epoch + 1}, Loss: {average_loss}')
+
 
 class LanguageIDModel(object):
     """
@@ -160,6 +238,7 @@ class LanguageIDModel(object):
     methods here. We recommend that you implement the RegressionModel before
     working on this part of the project.)
     """
+
     def __init__(self):
         # Our dataset contains words from five different languages, and the
         # combined alphabets of the five languages contain a total of 47 unique
