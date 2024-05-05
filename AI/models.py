@@ -1,6 +1,4 @@
 import nn
-
-
 class PerceptronModel(object):
     def __init__(self, dimensions):
         """
@@ -48,7 +46,6 @@ class PerceptronModel(object):
         Use the update method of the nn.Parameter class to update the weights.
         When an entire pass over the data set is completed without making any mistakes, 100% training accuracy has been achieved, and training can terminate.
         """
-        "*** YOUR CODE HERE ***"
         while True:
             mistake = False
             for x, y in dataset.iterate_once(1):
@@ -99,7 +96,6 @@ class RegressionModel(object):
                 to be used for training
         Returns: a loss node
         """
-        # Compute the squared loss
         pred = self.run(x)
         return nn.SquareLoss(pred, y)
 
@@ -163,7 +159,6 @@ class DigitClassificationModel(object):
     """
 
     def __init__(self):
-        # Initialize your model parameters here
         self.W1 = nn.Parameter(784, 300)
         self.b1 = nn.Parameter(1, 300)
         self.W2 = nn.Parameter(300, 10)
@@ -231,74 +226,72 @@ class DigitClassificationModel(object):
 
 
 class LanguageIDModel(object):
-    """
-    A model for language identification at a single-word granularity.
-
-    (See RegressionModel for more information about the APIs of different
-    methods here. We recommend that you implement the RegressionModel before
-    working on this part of the project.)
-    """
-
     def __init__(self):
-        # Our dataset contains words from five different languages, and the
-        # combined alphabets of the five languages contain a total of 47 unique
-        # characters.
-        # You can refer to self.num_chars or len(self.languages) in your code
-        self.num_chars = 47
+        self.num_chars = 47  # Number of unique characters across all languages
         self.languages = ["English", "Spanish", "Finnish", "Dutch", "Polish"]
+        self.hidden_size = 400
 
-        # Initialize your model parameters here
-        "*** YOUR CODE HERE ***"
+        # Input weights for the first character
+        self.W_initial = nn.Parameter(self.num_chars, self.hidden_size)
+        # Recurrent weights for subsequent characters
+        self.W_hidden = nn.Parameter(self.hidden_size, self.hidden_size)
+        # Bias for the hidden state
+        self.b_hidden = nn.Parameter(1, self.hidden_size)
+        # Weights for the output layer
+        self.W_output = nn.Parameter(self.hidden_size, len(self.languages))
+        # Bias for the output layer
+        self.b_output = nn.Parameter(1, len(self.languages))
+        # Additional hidden layer
+        self.W_hidden2 = nn.Parameter(self.hidden_size, self.hidden_size)  # Second recurrent layer weights
+        self.b_hidden2 = nn.Parameter(1, self.hidden_size)  # Second recurrent layer bias
 
     def run(self, xs):
         """
-        Runs the model for a batch of examples.
-
-        Although words have different lengths, our data processing guarantees
-        that within a single batch, all words will be of the same length (L).
-
-        Here `xs` will be a list of length L. Each element of `xs` will be a
-        node with shape (batch_size x self.num_chars), where every row in the
-        array is a one-hot vector encoding of a character. For example, if we
-        have a batch of 8 three-letter words where the last word is "cat", then
-        xs[1] will be a node that contains a 1 at position (7, 0). Here the
-        index 7 reflects the fact that "cat" is the last word in the batch, and
-        the index 0 reflects the fact that the letter "a" is the inital (0th)
-        letter of our combined alphabet for this task.
-
-        Your model should use a Recurrent Neural Network to summarize the list
-        `xs` into a single node of shape (batch_size x hidden_size), for your
-        choice of hidden_size. It should then calculate a node of shape
-        (batch_size x 5) containing scores, where higher scores correspond to
-        greater probability of the word originating from a particular language.
-
-        Inputs:
-            xs: a list with L elements (one per character), where each element
-                is a node with shape (batch_size x self.num_chars)
-        Returns:
-            A node with shape (batch_size x 5) containing predicted scores
-                (also called logits)
+        Run the model for a batch of examples.
+        xs is a list of length L of nodes each of shape (batch_size x self.num_chars)
         """
-        "*** YOUR CODE HERE ***"
+        h = nn.ReLU(nn.AddBias(nn.Linear(xs[0], self.W_initial), self.b_hidden))
+
+        for x in xs[1:]:
+            h = nn.ReLU(nn.AddBias(nn.Add(nn.Linear(x, self.W_initial), nn.Linear(h, self.W_hidden)), self.b_hidden))
+
+        logits = nn.AddBias(nn.Linear(h, self.W_output), self.b_output)
+        return logits
 
     def get_loss(self, xs, y):
         """
-        Computes the loss for a batch of examples.
-
-        The correct labels `y` are represented as a node with shape
-        (batch_size x 5). Each row is a one-hot vector encoding the correct
-        language.
-
-        Inputs:
-            xs: a list with L elements (one per character), where each element
-                is a node with shape (batch_size x self.num_chars)
-            y: a node with shape (batch_size x 5)
-        Returns: a loss node
+        Compute the softmax loss of the batch of examples.
+        xs: list of input character nodes
+        y: true labels node of shape (batch_size x 5)
         """
-        "*** YOUR CODE HERE ***"
+        logits = self.run(xs)
+        return nn.SoftmaxLoss(logits, y)
 
     def train(self, dataset):
         """
-        Trains the model.
+        Train the model on the provided dataset.
         """
-        "*** YOUR CODE HERE ***"
+        learning_rate = 0.01
+        epochs = 50
+        for epoch in range(epochs):
+            total_loss = 0
+            count = 0
+            for xs, y in dataset.iterate_once(100):  # Assuming batch size of 100
+                loss = self.get_loss(xs, y)
+                gradients = nn.gradients(loss,
+                                         [self.W_initial, self.W_hidden, self.b_hidden, self.W_output, self.b_output])
+
+                # Update each parameter
+                self.W_initial.update(gradients[0], -learning_rate)
+                self.W_hidden.update(gradients[1], -learning_rate)
+                self.b_hidden.update(gradients[2], -learning_rate)
+                self.W_output.update(gradients[3], -learning_rate)
+                self.b_output.update(gradients[4], -learning_rate)
+
+                total_loss += nn.as_scalar(loss)
+                count += 1
+
+            average_loss = total_loss / count
+            print("Epoch {}: Loss = {}".format(epoch + 1, average_loss))
+
+        print("Training complete.")

@@ -5,8 +5,6 @@
 ################################################################################
 
 import optparse
-import pickle
-import random
 import sys
 import traceback
 import json
@@ -236,7 +234,6 @@ def main():
 ################################################################################
 
 import numpy as np
-import matplotlib
 import contextlib
 
 import nn
@@ -244,7 +241,6 @@ import backend
 
 def check_dependencies():
     import matplotlib.pyplot as plt
-    import time
     fig, ax = plt.subplots(1, 1)
     ax.set_xlim([-1, 1])
     ax.set_ylim([-1, 1])
