@@ -22,7 +22,6 @@ from game import Directions
 from util import Stack
 from util import Queue
 from util import PriorityQueue
-from util import PriorityQueue
 
 class SearchProblem:
     """

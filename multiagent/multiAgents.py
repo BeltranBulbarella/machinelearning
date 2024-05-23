@@ -12,7 +12,6 @@
 # Pieter Abbeel (pabbeel@cs.berkeley.edu).
 
 
-from util import manhattanDistance
 from game import Directions
 import random, util
 
